@@ -10,42 +10,22 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import IconButton from '@mui/material/IconButton';
 import { useNavigate } from 'react-router-dom';
 import { getToken } from './firebase';
+import { useIntl  } from "react-intl";
 
+// Interface TransactionProps pour typer les props
 interface TransactionProps {
   utilisateur: IUtilisateur | null;
 }
 
+// Fonction Transaction
 function Transaction({ utilisateur }: TransactionProps) {
   const [transactions, setTransactions] = useState<ITransaction[]>([]);
   const [cryptos, setCryptos] = useState<Map<string, string>>(new Map());
   const [utilisateurs, setUtilisateurs] = useState<Map<string, string>>(new Map());
   const navigate = useNavigate();
+  const intl = useIntl();
 
-/*   useEffect(() => {
-    fetch('http://localhost:3000/transactions/')
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('Erreur réseau lors de la récupération des transactions');
-          }
-          return response.json();
-        })
-        .then(data => {
-          // Assurez-vous que la propriété transactions existe et est un tableau
-          if (data.transactions && Array.isArray(data.transactions)) {
-            setTransactions(data.transactions);
-            // Maintenant, pour chaque transaction, récupérez les noms des cryptomonnaies et des utilisateurs
-            data.transactions.forEach((transaction: ITransaction) => {
-              fetchCryptomonnaie(transaction.cryptomonnaie_id);
-              fetchUtilisateur(transaction.utilisateur_id);
-            });
-          } else {
-            // Gérez l'erreur si la structure n'est pas celle attendue
-            throw new Error('La réponse de l\'API n\'est pas dans le format attendu');
-          }
-        })
-        .catch(error => console.error(error));
-  }, []); */
-
+  // Fonction useEffect pour récupérer les données de la transaction selon l'utilisateur
 useEffect(() => {
   if (utilisateur) {
     getToken().then(token => {
@@ -69,6 +49,7 @@ useEffect(() => {
   }
   }, [utilisateur]);
 
+  // Fonction pour récupérer les données de la cryptomonnaie
   const fetchCryptomonnaie = async (id: string, token: string) => {
     if (!cryptos.has(id)) {
       try {
@@ -85,6 +66,7 @@ useEffect(() => {
     }
   };
   
+  // Fonction pour récupérer les données de l'utilisateur
   const fetchUtilisateur = async (id: string, token: string) => {
     if (!utilisateurs.has(id)) {
       try {
@@ -101,23 +83,31 @@ useEffect(() => {
     }
   };
 
+  // Fonction pour formater la date
   function formatDate(dateString : string) {
     const date = new Date(dateString);
     const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Janvier = 0
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear();
-    return `${year}-${month}-${day}`;
+    const locale = intl.locale;
+    if (locale === 'en') {
+        return `${month}/${day}/${year}`;
+    }
+    else {
+        return `${year}/${month}/${day}`;
+    }
 }
 
+// Fonction pour modifier une transaction
 const handleEditTransaction = (transaction: ITransaction) => {
   navigate(`/modifier-transaction/${transaction._id}`, { state: { transaction } });
 };
 
+// Fonction pour supprimer une transaction
 const handleDeleteTransaction = async (transactionId: string) => {
-  if (window.confirm('Êtes-vous sûr de vouloir supprimer cette transaction?')) {
+  if (window.confirm(intl.formatMessage({ id : 'transactionSupprimerMessage'}))) {
     try {
-      // Obtenir le jeton d'authentification Firebase
-      const token = await getToken(); // Assurez-vous que la fonction getToken est correctement importée depuis vos services d'authentification Firebase
+      const token = await getToken();
       if (!token) {
         throw new Error('Impossible de récupérer le jeton d\'authentification');
       }
@@ -125,7 +115,7 @@ const handleDeleteTransaction = async (transactionId: string) => {
       const response = await fetch(`http://localhost:3000/transactions/${transactionId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`, // Utiliser le jeton ici
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
       });
@@ -133,8 +123,6 @@ const handleDeleteTransaction = async (transactionId: string) => {
       if (!response.ok) {
         throw new Error('Erreur lors de la suppression de la transaction');
       }
-      
-      // Supprimer la transaction de l'état local après la suppression
       setTransactions(prevTransactions =>
         prevTransactions.filter(transaction => transaction._id !== transactionId)
       );
@@ -144,24 +132,23 @@ const handleDeleteTransaction = async (transactionId: string) => {
   }
 };
 
-
   return (
     <>
       {transactions.length > 0 ? (
         <Paper style={{ margin: '1rem', padding: '1rem' }}>
-          <Typography variant="h4" style={{ marginBottom: '1rem' }}>Transactions</Typography>
+          <Typography variant="h4" style={{ marginBottom: '1rem' }}>{intl.formatMessage({ id : 'transactionTitre'})}</Typography>
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">Utilisateur</TableCell>
-                  <TableCell align="center">Crypto-monnaie</TableCell>
-                  <TableCell align="center">Date</TableCell>
-                  <TableCell align="center">Type</TableCell>
-                  <TableCell align="center">Quantité</TableCell>
-                  <TableCell align="center">Prix Unit.</TableCell>
-                  <TableCell align="center">Total</TableCell>
-                  <TableCell align="center">Actions</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionUtilisateur'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionCrypto'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionDate'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionType'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionQuantite'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionPrix'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionValeur'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'transactionAction'})}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -172,8 +159,8 @@ const handleDeleteTransaction = async (transactionId: string) => {
                     <TableCell align="center">{formatDate(transaction.date)}</TableCell>
                     <TableCell align="center">{transaction.type}</TableCell>
                     <TableCell align="center">{transaction.quantite}</TableCell>
-                    <TableCell align="center">${transaction.prix_unitaire.toFixed(2)}</TableCell>
-                    <TableCell align="center">${transaction.total.toFixed(2)}</TableCell>
+                    <TableCell align="center">{transaction.prix_unitaire.toFixed(2)}</TableCell>
+                    <TableCell align="center">{transaction.total.toFixed(2)}</TableCell>
                     <TableCell align="center">
                       <IconButton onClick={() => handleEditTransaction(transaction)}>
                         <EditIcon />
@@ -190,7 +177,7 @@ const handleDeleteTransaction = async (transactionId: string) => {
         </Paper>
       ) : (
         <Typography variant="h6" color="textSecondary" align="center">
-          Il n'y a pas de transactions
+          {intl.formatMessage({ id : 'transactionMessage'})}
         </Typography>
       )}
     </>

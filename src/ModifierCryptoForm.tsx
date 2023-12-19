@@ -1,29 +1,31 @@
 // ModifierCryptoForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { TextField, Button, Container, Grid, Typography, Checkbox, FormControlLabel, InputAdornment, IconButton } from '@mui/material';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import { TextField, Button, Container, Grid, Typography, Checkbox, FormControlLabel } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { getToken } from './firebase';
+import { useIntl  } from "react-intl";
 
+// Créer un thème personnalisé
 const theme = createTheme({
     palette: {
       primary: {
-        main: '#1565c0', // Couleur principale plus douce
+        main: '#1565c0',
       },
       background: {
-        default: '#f5f5f5', // Fond clair
+        default: '#f5f5f5',
       },
       text: {
-        primary: '#333', // Texte foncé pour un meilleur contraste
+        primary: '#333',
       },
     },
     components: {
       MuiTextField: {
         styleOverrides: {
           root: {
-            borderColor: '#ced4da', // Bordure plus douce
+            borderColor: '#ced4da',
             '& input[type="date"]': {
-                color: '#333', // Changer à la couleur désirée
+                color: '#333',
               }
           },
         },
@@ -31,13 +33,14 @@ const theme = createTheme({
       MuiButton: {
         styleOverrides: {
           root: {
-            boxShadow: '0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)', // Ombre subtile pour le bouton
+            boxShadow: '0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
           },
         },
       },
     },
   });
 
+  // Fonction ModifierCryptoForm
 function ModifierCryptoForm() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -50,21 +53,34 @@ function ModifierCryptoForm() {
         actif: false,
         valeur_actuelle: 0,
     });
+    const intl = useIntl();
 
-    useEffect(() => {
-        // Ici, vous récupérez les données de la crypto à modifier à partir de l'état de location, 
-        // ou vous pourriez faire une requête à l'API si nécessaire
+    // Récupérer les données de la crypto
+    const setData = async () => {
         if (location.state && location.state.crypto) {
             setCryptoData(location.state.crypto);
         } else {
+            const token = await getToken();
+            if (!token) {
+                console.error("Impossible de récupérer le jeton d'authentification.");
+                return;
+            }
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
             // Faire une requête API pour obtenir les détails si non disponibles
-            fetch(`http://localhost:3000/cryptos/${id}`)
+            fetch(`http://localhost:3000/cryptos/${id}`, config)
                 .then(response => response.json())
                 .then(data => setCryptoData(data))
                 .catch(error => console.error('Erreur lors de la récupération des détails de la crypto:', error));
         }
+        }
+
+    useEffect(() => {
+        setData();
     }, [id, location.state]);
 
+    // Formater la date pour l'affichage
     function formatDate(dateString : string) {
         const date = new Date(dateString);
         const day = date.getDate().toString().padStart(2, '0');
@@ -73,16 +89,17 @@ function ModifierCryptoForm() {
         return `${year}-${month}-${day}`;
     }
 
+    // Valider le formulaire
     const validateForm = () => {
         // Tous les champs sont requis
         if (!cryptoData.nom || !cryptoData.symbole || !cryptoData.date_creation || cryptoData.valeur_actuelle === null) {
-            alert("Tous les champs sont requis.");
+            alert(intl.formatMessage({ id : 'formAjouterCryptoChampAlerte'}));
             return false;
         }
     
         // Le symbole doit être en majuscules
         if (cryptoData.symbole !== cryptoData.symbole.toUpperCase()) {
-            alert("Le symbole doit être en majuscules.");
+            alert(intl.formatMessage({ id : 'formAjouterCryptoSymboleAlerte'}));
             return false;
         }
     
@@ -90,29 +107,30 @@ function ModifierCryptoForm() {
         const currentDate = new Date();
         const creationDate = new Date(cryptoData.date_creation);
         if (creationDate > currentDate) {
-            alert("La date de création ne doit pas être dans le futur.");
+            alert(intl.formatMessage({ id : 'formAjouterCryptoDateAlerte'}));
             return false;
         }
     
         // La valeur ne doit pas être négative
         if (cryptoData.valeur_actuelle < 0) {
-            alert("La valeur ne doit pas être négative.");
+            alert(intl.formatMessage({ id : 'formAjouterCryptoValeurAlerte'}));
             return false;
         }
     
         return true;
     }
 
+    // Envoyer le formulaire
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         // Validation ici si nécessaire
         if (!validateForm()) {
-            return; // Arrête l'exécution si la validation échoue
+            return;
         }
 
         const dataToSend = {
             crypto: {
-                _id: cryptoData._id,  // Assurez-vous que _id est inclus si nécessaire par votre API
+                _id: cryptoData._id,
                 nom: cryptoData.nom,
                 symbole: cryptoData.symbole,
                 date_creation: cryptoData.date_creation,
@@ -120,12 +138,18 @@ function ModifierCryptoForm() {
                 valeur_actuelle: cryptoData.valeur_actuelle,
             },
         };
+        const token = await getToken();
+        if (!token) {
+            console.error("Impossible de récupérer le jeton d'authentification.");
+            return;
+        }
         
         try {
             const response = await fetch(`http://localhost:3000/cryptos/`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify(dataToSend),
             });
@@ -133,24 +157,21 @@ function ModifierCryptoForm() {
             if (!response.ok) {
                 throw new Error(`Erreur HTTP ! statut: ${response.status}`);
             }
-
-            // Gérer la réponse ici
             navigate('/');
         } catch (error) {
             console.error('Erreur lors de la mise à jour de la crypto:', error);
         }
     };
 
+
     return (
         <ThemeProvider theme={theme}>
             <Container maxWidth="sm" style={{ marginTop: '2em', backgroundColor: 'white', padding: '2em', borderRadius: '5px', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
                 <Typography variant="h2" gutterBottom style={{ textAlign: 'center', color: theme.palette.text.primary }}>
-                    Modifier la Crypto
+                    {intl.formatMessage({ id : 'formModifierCryptoTitre'})}
                 </Typography>
                 <form onSubmit={handleSubmit}>
                     <Grid container spacing={2} alignItems="center" justifyContent="center">
-                        {/* Les champs du formulaire */}
-                        {/* ...autres Grid items... */}
                         <Grid item xs={12}>
                             <TextField
                                 required
@@ -158,7 +179,7 @@ function ModifierCryptoForm() {
                                 id="nom"
                                 label={
                                     <span>
-                                        Nom <span style={{color: 'red'}}>*</span>
+                                        {intl.formatMessage({ id : 'formModifierCryptoNom'})} <span style={{color: 'red'}}>*</span>
                                     </span>
                                 }
                                 name="nom"
@@ -173,7 +194,7 @@ function ModifierCryptoForm() {
                                 id="symbole"
                                 label={
                                     <span>
-                                        Symbole <span style={{color: 'red'}}>*</span>
+                                        {intl.formatMessage({ id : 'formModifierCryptoSymbole'})} <span style={{color: 'red'}}>*</span>
                                     </span>
                                 }
                                 name="symbole"
@@ -188,7 +209,7 @@ function ModifierCryptoForm() {
                                 id="date_creation"
                                 label={
                                     <span>
-                                        Date de création <span style={{color: 'red'}}>*</span>
+                                        {intl.formatMessage({ id : 'formModifierCryptoDate'})} <span style={{color: 'red'}}>*</span>
                                     </span>
                                 }
                                 type="date"
@@ -208,7 +229,7 @@ function ModifierCryptoForm() {
                                         color="primary"
                                     />
                                 }
-                                label={<Typography style={{ color: theme.palette.text.primary }}>Actif</Typography>}
+                                label={<Typography style={{ color: theme.palette.text.primary }}>{intl.formatMessage({ id : 'formModifierCryptoActif'})}</Typography>}
                             />
                         </Grid>
                         <Grid item xs={12}>
@@ -218,7 +239,7 @@ function ModifierCryptoForm() {
                                 id="valeur_actuelle"
                                 label={
                                     <span>
-                                        Valeur actuelle <span style={{color: 'red'}}>*</span>
+                                        {intl.formatMessage({ id : 'formModifierCryptoValeur'})} <span style={{color: 'red'}}>*</span>
                                     </span>
                                 }
                                 type="number"
@@ -229,7 +250,7 @@ function ModifierCryptoForm() {
                         </Grid>
                         <Grid item xs={12}>
                             <Button type="submit" fullWidth variant="contained" color="primary" style={{ marginTop: '2em', padding: '10px 0' }}>
-                                SOUMETTRE
+                                {intl.formatMessage({ id : 'formModifierCryptoBouton'})}
                             </Button>
                         </Grid>
                     </Grid>

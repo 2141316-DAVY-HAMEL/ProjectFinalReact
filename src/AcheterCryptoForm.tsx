@@ -5,12 +5,15 @@ import { IUtilisateur } from '../Models/Utilisateur';
 import { ICrypto } from '../Models/Crypto';
 import Snackbar from '@mui/material/Snackbar';
 import { getToken } from './firebase';
+import { useIntl  } from "react-intl";
 
+// Interface pour les props du composant AcheterCryptoForm
 interface AcheterCryptoFormProps {
     utilisateur: IUtilisateur | null;
     onUpdateUtilisateur: (nouvelUtilisateur: IUtilisateur) => void;
 }
 
+// Thème personnalisé pour le formulaire
 const theme = createTheme({
   palette: {
     primary: {
@@ -41,12 +44,14 @@ const theme = createTheme({
   },
 });
 
+// Fonction pour acheter une cryptomonnaie
 function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFormProps) {
     const [cryptos, setCryptos] = useState<ICrypto[]>([]);
     const [selectedCrypto, setSelectedCrypto] = useState<string>('');
     const [montant, setMontant] = useState<number>(0);
     const [prix, setPrix] = useState<number>(0);
     const [openSnackbar, setOpenSnackbar] = useState(false);
+    const intl = useIntl();
 
     useEffect(() => {
             const fetchCryptos = async () => {
@@ -72,6 +77,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
           fetchCryptos();
     }, []);
 
+    // Fonction pour mettre à jour l'utilisateur actif
     const miseAJourUtilisateur = async (nouvelUtilisateur: IUtilisateur) => {
       const token = await getToken();
       if (!token) {
@@ -89,14 +95,13 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
         if (!response.ok) {
           throw new Error(data.message || 'Erreur lors de la récupération des données utilisateur.');
         }
-  
-        // Mettre à jour l'utilisateur actif dans le composant parent
         onUpdateUtilisateur(data.utilisateur);
       } catch (error) {
         console.error('Erreur lors de la récupération des données utilisateur:', error);
       }
   };
 
+  // Fonction pour mettre à jour le prix de la cryptomonnaie sélectionnée
     const handleCryptoChange = (event: React.ChangeEvent<{ value: unknown }>) => {
         const cryptoId = event.target.value as string;
         setSelectedCrypto(cryptoId);
@@ -106,21 +111,28 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
         }
     };
 
+    // Fonction pour mettre à jour le montant de la cryptomonnaie sélectionnée
     const handleMontantChange = (event: React.ChangeEvent<{ value: unknown }>) => {
         setMontant(event.target.value as number);
     };
 
+    // Fonction pour soumettre le formulaire
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-        if (!selectedCrypto || montant <= 0 || prix <= 0) {
-            alert("Veuillez sélectionner une cryptomonnaie et entrer un montant valide.");
+        if (!utilisateur) {
+          alert(intl.formatMessage({ id : 'formAcheterCryptoUtilisateurAlerte'}));
             return;
         }
-    
-        // Appelez la fonction pour acheter la cryptomonnaie et mettre à jour le portefeuille.
+
+        if (!selectedCrypto || montant <= 0 || prix <= 0) {
+            alert(intl.formatMessage({ id : 'formAcheterCryptoVerifAlerte'}));
+            return;
+        }
+  
         await acheterCrypto(selectedCrypto, montant, prix);
     };
 
+    // Fonction pour générer une adresse aléatoire
     const generateRandomAddress = () => {
         const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
         let result = '';
@@ -131,9 +143,8 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
         return result;
       };
 
+      // Fonction pour ajouter une transaction
       const ajouterTransaction = async (cryptoId: string, quantiteAchete: number, prixUnitaire: number) => {
-        //let idObjUtilisateur = {"$oid": utilisateur?._id};
-        //let idObjCrypto = {"$oid": cryptoId};
         const nouvelleTransaction = {
           utilisateur_id: utilisateur?._id,
           cryptomonnaie_id: cryptoId,
@@ -170,6 +181,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
         }
       };
 
+      // Fonction pour acheter une cryptomonnaie
       const acheterCrypto = async (cryptoId: string, montantAchat: number, prix: number) => {
         if (!utilisateur) {
           console.error("Aucun utilisateur connecté.");
@@ -183,7 +195,8 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
         }
       
         const quantiteAchete = montantAchat / prix;
-        let portefeuilleMisAJour = utilisateur.portefeuille.slice(); // Créez une copie du portefeuille actuel
+        let portefeuilleMisAJour = utilisateur.portefeuille.slice();
+        let isNewPortefeuille = false;
       
         // Vérifiez si l'utilisateur possède déjà cette cryptomonnaie
         const index = portefeuilleMisAJour.findIndex(item => item.cryptomonnaie_id === cryptoId);
@@ -192,11 +205,11 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
           // Si oui, mettez à jour la quantité
           portefeuilleMisAJour[index].quantite += quantiteAchete;
         } else {
-          // Sinon, ajoutez un nouveau portefeuille
+          isNewPortefeuille = true;
           const nouveauPortefeuille = {
-            cryptomonnaie_id: cryptoId,
-            quantite: quantiteAchete,
-            adresses: [generateRandomAddress()] // Générez une nouvelle adresse aléatoire
+              cryptomonnaie_id: cryptoId,
+              quantite: quantiteAchete,
+              adresses: [generateRandomAddress()]
           };
           portefeuilleMisAJour.push(nouveauPortefeuille);
         }
@@ -206,14 +219,17 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
           ...utilisateur,
           portefeuille: portefeuilleMisAJour
         };
+
+        const url = isNewPortefeuille ? `http://localhost:3000/utilisateurs/${utilisateur._id}` : 'http://localhost:3000/utilisateurs/';
+        const method = isNewPortefeuille ? 'PATCH' : 'PUT';
       
         // Envoyez la requête PUT pour mettre à jour les données de l'utilisateur
         try {
-          const response = await fetch(`http://localhost:3000/utilisateurs/`, {
-            method: 'PUT',
+          const response = await fetch(url, {
+            method: method,
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` // Ajoutez le jeton ici
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ utilisateur: utilisateurMisAJour })
           });
@@ -241,6 +257,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
         }
       };
 
+      // Fonction pour fermer la snackbar
       const handleCloseSnackbar = (_event?: React.SyntheticEvent, reason?: string) => {
         if (reason === 'clickaway') {
             return;
@@ -252,11 +269,11 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
       <ThemeProvider theme={theme}>
         <Container maxWidth="sm" style={{ backgroundColor: theme.palette.background.default, padding: 20, borderRadius: 4 }}>
           <Typography variant="h2" gutterBottom style={{ textAlign: 'center', color: theme.palette.text.primary }}>
-              Acheter une cryptomonnaie
+              {intl.formatMessage({ id : 'formAcheterCryptoTitre'})}
             </Typography>
             <form onSubmit={handleSubmit}>
                 <FormControl fullWidth>
-                    <InputLabel id="crypto-label">Cryptomonnaie</InputLabel>
+                    <InputLabel id="crypto-label">{intl.formatMessage({ id : 'formAcheterCryptoCrypto'})}</InputLabel>
                     <Select
                         labelId="crypto-label"
                         id="crypto-select"
@@ -270,7 +287,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
                     </Select>
                 </FormControl>
                 <TextField
-                    label="Prix actuel"
+                    label={intl.formatMessage({ id : 'formAcheterCryptoPrix'})}
                     value={prix}
                     InputProps={{
                         readOnly: true,
@@ -279,7 +296,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
                     margin="normal"
                 />
                 <TextField
-                    label="Montant à acheter"
+                    label={intl.formatMessage({ id : 'formAcheterCryptoMontant'})}
                     type="number"
                     value={montant}
                     onChange={handleMontantChange}
@@ -287,7 +304,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
                     margin="normal"
                 />
                 <Button type="submit" variant="contained" color="primary" fullWidth>
-                    Acheter
+                  {intl.formatMessage({ id : 'formAcheterCryptoBouton'})}
                 </Button>
             </form>
         </Container>
@@ -295,7 +312,7 @@ function AcheterCryptoForm({ utilisateur, onUpdateUtilisateur }: AcheterCryptoFo
                 open={openSnackbar}
                 autoHideDuration={6000}
                 onClose={handleCloseSnackbar}
-                message="Crypto-monnaie achetée avec succès!"
+                message={intl.formatMessage({ id : 'formAcheterCryptoSnackbar'})}
                 action={
                     <Button color="secondary" size="small" onClick={handleCloseSnackbar}>
                         OK

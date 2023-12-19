@@ -19,14 +19,21 @@ import './App.css';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { getAuth } from 'firebase/auth';
 
-function App() {
+
+// Interface AppProps pour typer les props
+interface AppProps {
+  changeLanguage: (lang: string) => void;
+}
+
+// Fonction App
+function App({ changeLanguage }: AppProps) {
   const [utilisateurActif, setUtilisateurActif] = useState<IUtilisateur | null>(null);
   const auth = getAuth();
   const [user] = useAuthState(auth);
 
   return (
     <Router>
-        {user && <NavBar updateUtilisateurActif={setUtilisateurActif} />}
+        {user && <NavBar updateUtilisateurActif={setUtilisateurActif} changeLanguage={changeLanguage} />}
         <div style={{ width: '100%' }}>
         <Routes>
           <Route 

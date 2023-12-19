@@ -2,6 +2,7 @@
 /**
  * Basé sur le modèle de Material UI 
  * https://github.com/mui/material-ui/tree/v5.14.4/docs/data/material/getting-started/templates/sign-in
+ * Code de Étienne Rivard
  **/
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +20,7 @@ import Grid from '@mui/material/Grid';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Typography from '@mui/material/Typography';
 import React from 'react';
+import { useIntl  } from "react-intl";
 
 function Copyright(props: any) {
 return (
@@ -40,6 +42,7 @@ const defaultTheme = createTheme();
 function Login() {
 const [user, loading] = useAuthState(auth);
 const navigate = useNavigate();
+const intl = useIntl();
 
 useEffect(() => {
     if (loading) {
@@ -94,7 +97,7 @@ return (
             <LockOutlinedIcon />
             </Avatar>
             <Typography component="h1" variant="h5">
-            "S'authentifier à X"
+            {intl.formatMessage({ id : 'AuthentificationTitre'})}
             </Typography>
             <Box
             component="form"
@@ -107,7 +110,7 @@ return (
                 required
                 fullWidth
                 id="email"
-                label="courriel"
+                label={intl.formatMessage({ id : 'AuthentificationCourriel'})}
                 name="email"
                 autoComplete="email"
                 autoFocus
@@ -117,7 +120,7 @@ return (
                 required
                 fullWidth
                 name="password"
-                label="mot de passe"
+                label={intl.formatMessage({ id : 'AuthentificationMotDePasse'})}
                 type="password"
                 id="password"
                 autoComplete="current-password"
@@ -128,7 +131,7 @@ return (
                 variant="contained"
                 sx={{ mt: 3, mb: 2 }}
             >
-                S'authentifier
+                {intl.formatMessage({ id : 'AuthentificationBouton'})}
             </Button>
             <Copyright sx={{ mt: 5 }} />
             </Box>

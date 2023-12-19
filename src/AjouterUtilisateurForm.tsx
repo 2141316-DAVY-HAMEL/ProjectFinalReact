@@ -1,12 +1,43 @@
 // AjouterUtilisateurForm.tsx
 import React, { useState } from 'react';
 import { Container, TextField, Button, Grid, Typography, Snackbar, FormControlLabel, Checkbox } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { getToken } from './firebase';
+import { useIntl  } from "react-intl";
 
+// Créer un thème personnalisé
+const theme = createTheme({
+    palette: {
+      primary: {
+        main: '#1565c0',
+      },
+      background: {
+        default: '#f5f5f5',
+      },
+      text: {
+        primary: '#333',
+      },
+    },
+    components: {
+      MuiTextField: {
+        styleOverrides: {
+          root: {
+            borderColor: '#ced4da',
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            boxShadow: '0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)',
+          },
+        },
+      },
+    },
+  });
 
+  // Fonction ajouter utilisateur
 function AjouterUtilisateurForm() {
-    const navigate = useNavigate();
     const [userData, setUserData] = useState({
         nom: '',
         email: '',
@@ -15,8 +46,9 @@ function AjouterUtilisateurForm() {
         actif: false,
     });
     const [openSnackbar, setOpenSnackbar] = useState(false);
+    const intl = useIntl();
     
-
+    // Valider le formulaire
     const validateForm = () => {
       // Tous les champs sont requis
       if (!userData.nom || !userData.email || !userData.motDePasse === null) {
@@ -40,11 +72,11 @@ function AjouterUtilisateurForm() {
       return true;
   }
 
+    // Fonction soumettre le formulaire
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-                // Vérification des champs ici
                 if (!validateForm()) {
-                  return; // Arrête l'exécution si la validation échoue
+                  return;
               }
       
               const dataToSend = {
@@ -77,27 +109,31 @@ function AjouterUtilisateurForm() {
                 throw new Error(`Erreur HTTP ! statut: ${response.status}`);
             }
 
-            setOpenSnackbar(true); // Afficher le Snackbar en cas de succès
-            setUserData({ nom: '', email: '', motDePasse: '', date_inscription: new Date() , actif: false }); // Réinitialiser le formulaire
+            setOpenSnackbar(true);
+            setUserData({ nom: '', email: '', motDePasse: '', date_inscription: new Date() , actif: false });
         } catch (error) {
             console.error('Erreur lors de la création de l’utilisateur:', error);
         }
     };
 
+    // Fermer le Snackbar
     const handleCloseSnackbar = () => {
         setOpenSnackbar(false);
     };
 
     return (
-        <Container maxWidth="sm">
-            <Typography variant="h4" gutterBottom>Créer un Utilisateur</Typography>
+        <ThemeProvider theme={theme}>
+        <Container maxWidth="sm" style={{ backgroundColor: theme.palette.background.default, padding: 20, borderRadius: 4 }}>
+            <Typography variant="h4" gutterBottom style={{ textAlign: 'center', color: theme.palette.text.primary }}>
+                {intl.formatMessage({ id : 'formUtilisateurTitre'})}
+            </Typography>
             <form onSubmit={handleSubmit}>
                 <Grid container spacing={2}>
                     <Grid item xs={12}>
                         <TextField
                             required
                             fullWidth
-                            label="Nom"
+                            label={intl.formatMessage({ id : 'formUtilisateurNom'})}
                             name="nom"
                             value={userData.nom}
                             onChange={(event) => setUserData({ ...userData, nom: event.target.value })}
@@ -107,7 +143,7 @@ function AjouterUtilisateurForm() {
                         <TextField
                             required
                             fullWidth
-                            label="Email"
+                            label={intl.formatMessage({ id : 'formUtilisateurCourriel'})}
                             name="email"
                             type="email"
                             value={userData.email}
@@ -118,7 +154,7 @@ function AjouterUtilisateurForm() {
                         <TextField
                             required
                             fullWidth
-                            label="Mot de Passe"
+                            label={intl.formatMessage({ id : 'formUtilisateurMotDePasse'})}
                             name="motDePasse"
                             type="password"
                             value={userData.motDePasse}
@@ -135,12 +171,12 @@ function AjouterUtilisateurForm() {
                                         color="primary"
                                     />
                                 }
-                                label="Actif"
+                                label={<Typography style={{ color: theme.palette.text.primary }}>{intl.formatMessage({ id : 'formUtilisateurActif'})}</Typography>}
                             />
                         </Grid>
                     <Grid item xs={12}>
                         <Button type="submit" fullWidth variant="contained" color="primary">
-                            Créer
+                            {intl.formatMessage({ id : 'formUtilisateurBouton'})}
                         </Button>
                     </Grid>
                 </Grid>
@@ -149,9 +185,10 @@ function AjouterUtilisateurForm() {
                 open={openSnackbar}
                 autoHideDuration={6000}
                 onClose={handleCloseSnackbar}
-                message="Utilisateur créé avec succès!"
+                message={intl.formatMessage({ id : 'formUtilisateurSnackbar'})}
             />
         </Container>
+        </ThemeProvider>
     );
 }
 

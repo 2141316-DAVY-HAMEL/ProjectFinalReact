@@ -5,29 +5,21 @@ import { IUtilisateur, IPortefeuille } from '../Models/Utilisateur';
 import { ICrypto } from '../Models/Crypto';
 import { useNavigate } from 'react-router-dom';
 import { getToken } from './firebase';
+import { useIntl  } from "react-intl";
 
+// Interface PortefeuilleProps pour typer les props
 interface PortefeuilleProps {
   utilisateur: IUtilisateur | null;
 }
 
+// Fonction Portefeuille
 function Portefeuille({ utilisateur }: PortefeuilleProps) {
   const [donneesUtilisateur, setDonneesUtilisateur] = useState<IUtilisateur | null>(null);
   const [cryptos, setCryptos] = useState<Map<string, ICrypto>>(new Map());
   const navigate = useNavigate();
+  const intl = useIntl();
 
-const cardStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'space-between',
-  height: 200,
-  width: 150,
-  padding: '16px',
-  margin: '8px',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  borderRadius: '8px',
-  background: '#fff',
-};
-
+  // Fonction useEffect pour récupérer les données de l'utilisateur
 useEffect(() => {
   if (utilisateur) {
     getToken().then(token => {
@@ -50,6 +42,7 @@ useEffect(() => {
   }
 }, [utilisateur]);
 
+// Fonction pour récupérer les données de la cryptomonnaie
 const fetchCryptomonnaie = async (id: string, token: string) => {
   if (!cryptos.has(id)) {
     try {
@@ -66,11 +59,12 @@ const fetchCryptomonnaie = async (id: string, token: string) => {
   }
 };
 
-      // Fonction pour gérer le clic sur le bouton
+    // Fonction pour acheter une cryptomonnaie
     const acheterCrypto = () => {
         navigate('/acheter-crypto');
     }
 
+    // Fonction pour vendre une cryptomonnaie
     const vendreCrypto = () => {
         navigate('/vendre-crypto');
     }
@@ -78,20 +72,20 @@ const fetchCryptomonnaie = async (id: string, token: string) => {
     return (
       <>
         <Button variant="contained" onClick={acheterCrypto} style={{ marginBottom: 10, marginRight: 10 }}>
-          Acheter Crypto
+          {intl.formatMessage({ id : 'portefeuilleBoutonAcheter'})}
         </Button>
         <Button variant="contained" onClick={vendreCrypto} style={{ marginBottom: 10 }}>
-          Vendre Crypto
+          {intl.formatMessage({ id : 'portefeuilleBoutonVendre'})}
         </Button>
         <Paper style={{ margin: '1rem', padding: '1rem' }}>
-          <Typography variant="h4" style={{ marginBottom: '1rem' }}>Portefeuille</Typography>
+          <Typography variant="h4" style={{ marginBottom: '1rem' }}>{intl.formatMessage({ id : 'portefeuilleTitre'})}</Typography>
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell align="center">Crypto</TableCell>
-                  <TableCell align="center">Quantité</TableCell>
-                  <TableCell align="center">Valeur Totale</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'portefeuilleCrypto'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'portefeuilleQuantite'})}</TableCell>
+                  <TableCell align="center">{intl.formatMessage({ id : 'portefeuilleValeur'})}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -101,11 +95,11 @@ const fetchCryptomonnaie = async (id: string, token: string) => {
                     return (
                       <TableRow key={index}>
                         <TableCell component="th" scope="row"  align="center">
-                          {crypto ? crypto.nom : 'Chargement...'}
+                          {crypto ? crypto.nom : intl.formatMessage({ id : 'portefeuilleChargement'})}
                         </TableCell>
                         <TableCell align="center">{item.quantite}</TableCell>
                         <TableCell align="center">
-                          {crypto ? `$${(crypto.valeur_actuelle * item.quantite).toFixed(2)}` : 'Chargement...'}
+                          {crypto ? `$${(crypto.valeur_actuelle * item.quantite).toFixed(2)}` : intl.formatMessage({ id : 'portefeuilleChargement'})}
                         </TableCell>
                       </TableRow>
                     );
@@ -113,7 +107,7 @@ const fetchCryptomonnaie = async (id: string, token: string) => {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} align="center">
-                      Le portefeuille de cet utilisateur est vide.
+                      {intl.formatMessage({ id : 'portefeuilleVide'})}
                     </TableCell>
                   </TableRow>
                 )}
